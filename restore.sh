@@ -2844,6 +2844,15 @@ shsh_save() {
     log "Successfully saved $version blobs: $shsh_path"
 }
 
+ipsw_select() {
+
+    print "*** Please drag and drop IPSW in here ***"
+
+    read ipswselection
+
+    print "*** $ipswselection has been selected! "
+}
+
 ipsw_download() {
     local version="$device_target_vers"
     local build_id="$device_target_build"
@@ -8076,6 +8085,7 @@ menu_ipsw_downloader() {
         menu_items=("Enter Build Version")
         if [[ -n $vers ]]; then
             menu_items+=("(*) Start Download")
+            menu_items+=("(*) Select IPSW")
         fi
         menu_items+=("Go Back")
         menu_print_info
@@ -8102,8 +8112,24 @@ menu_ipsw_downloader() {
             ;;
             "(*) Start Download" )
                 device_target_build="$vers"
+                
+                if [[ $device_type == "AppleTV6,2"  ]]; then
+                print "Apple TV 4K detected. Cannot download IPSWs."
+                sleep 7
+                back=1
+
+                else
+
                 ipsw_download
                 log "IPSW downloading is done"
+                pause
+
+                fi
+            ;;
+            "(*) Select IPSW" )
+                device_target_build="$vers"
+                ipsw_select
+                log "IPSW has been selected"
                 pause
             ;;
             "Go Back" ) back=1;;
