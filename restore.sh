@@ -819,9 +819,10 @@ device_entry() {
 }
 
 device_get_name() {
-    # all devices that run iOS/iPhoneOS/iPadOS
+    # all devices that run iOS/iPhoneOS/iPadOS/tvOS
     # adding more entries here is no longer necessary since AppleDB is now used as fallback
     case $device_type in
+        "AppleTV6,2") device_name="Apple TV 4K (2017)";;
         "iPhone1,1") device_name="iPhone 2G";;
         "iPhone1,2") device_name="iPhone 3G";;
         "iPhone2,1") device_name="iPhone 3GS";;
@@ -1238,6 +1239,7 @@ device_get_info() {
     if [[ -z $device_type && -n $device_model ]]; then
         # device_model fallback (this will be up to checkm8 devices only)
         case $device_model in
+            j105a  ) device_type="AppleTV6,2";;
             k48  ) device_type="iPad1,1";;
             k93  ) device_type="iPad2,1";;
             k94  ) device_type="iPad2,2";;
@@ -1324,6 +1326,7 @@ device_get_info() {
     if [[ -n $device_type && -z $device_model ]]; then
         # device_model fallback that should only happen on no device mode
         case $device_type in
+            AppleTV6,2  ) device_model="j105a";;
             iPad1,1  ) device_model="k48";;
             iPad2,1  ) device_model="k93";;
             iPad2,2  ) device_model="k94";;
@@ -1525,6 +1528,12 @@ device_get_info() {
         iPad5,* | iPhone[89],* | iPod9,1 )
             device_latest_vers="15.8.5"
             device_latest_build="19H394"
+
+        ;;
+        AppleTV6,2 )
+            device_latest_vers="26.1"
+            device_latest_build="23J582"
+
         ;;
         iPad6,* | iPhone10,* )
             device_latest_vers="16.7.12"
@@ -2369,7 +2378,7 @@ device_fw_key_check() {
 
     if [[ ! -e "$keys_path/index.html" ]]; then
         mkdir -p "$keys_path" 2>/dev/null
-        local try=("https://raw.githubusercontent.com/LukeZGD/Legacy-iOS-Kit-Keys/master/$device_type/$build/index.html"
+        local try=("https://raw.githubusercontent.com/Zenzeq/Legacy-iOS-Kit-Keys/master/$device_type/$build/index.html"
                    "http://127.0.0.1:8888/firmware/$device_type/$build"
                    "https://api.m1sta.xyz/wikiproxy/$device_type/$build")
         for i in "${try[@]}"; do
