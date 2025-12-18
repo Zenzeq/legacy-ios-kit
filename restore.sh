@@ -8630,7 +8630,8 @@ ipsw_version_set() {
      else 
 
     file_extract_from_archive "$newpath.ipsw" Restore.plist
-    if [[ $platform == "macos" ]]; then
+
+    if [[ $platform == "macos" && $device_type != "AppleTV6,2" ]]; then
         rm -f BuildVer Version
         plutil -extract 'ProductVersion' xml1 Restore.plist -o Version
         vers=$(cat Version | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
