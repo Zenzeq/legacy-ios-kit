@@ -8618,7 +8618,7 @@ ipsw_version_set() {
     local build
 
     log "Getting version from IPSW"
-    if [[ device_type == "AppleTV6,2" ]]; then
+    if [[ $device_type == "AppleTV6,2" ]]; then
         log "Detected Apple TV 4K IPSW"
         file_extract_from_archive "$newpath.ipsw" BuildManifest.plist
         log "Extracted BuildManifest"
