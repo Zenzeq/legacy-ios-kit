@@ -8627,9 +8627,12 @@ ipsw_version_set() {
         plutil -extract 'ProductBuildVersion' xml1 BuildManifest.plist -o BuildVer
         build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
 
-     else 
+     elif  [[ $device_type != "AppleTV6,2" ]]; then
 
+        log "Are we seeing Restore.plist?"
     file_extract_from_archive "$newpath.ipsw" Restore.plist
+    fi
+
 
     if [[ $platform == "macos" && $device_type != "AppleTV6,2" ]]; then
         rm -f BuildVer Version
@@ -8637,7 +8640,9 @@ ipsw_version_set() {
         vers=$(cat Version | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
         plutil -extract 'ProductBuildVersion' xml1 Restore.plist -o BuildVer
         build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
-    else
+    
+    elif [[ $device_type != "AppleTV6,2" ]]; then
+
         vers=$(cat Restore.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
         build=$(cat Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
     fi
@@ -8651,7 +8656,6 @@ ipsw_version_set() {
         target_det=$(echo "$device_target_vers" | cut -d. -f1)
         target_det2=$(echo "$device_target_vers" | cut -d. -f2)
     fi
-fi
 }
 
 ipsw_custom_set() {
