@@ -441,6 +441,7 @@ set_tool_paths() {
             (while true; do sudo -v; sleep 60; done) &
             sudoloop_pid=$!
             futurerestore="sudo "
+            gaster4k="sudo "
             gaster="sudo "
             idevicerestore="sudo LD_LIBRARY_PATH=$dir/lib "
             ipwnder="sudo "
@@ -483,6 +484,7 @@ set_tool_paths() {
             fi
         fi
         gaster+="$dir/gaster"
+        gaster4k+="$dir/gaster4k"
 
     elif [[ $(uname -m) == "iP"* ]]; then
         error "Running Legacy iOS Kit on iOS is not supported (yet)" "* Supported platforms: Linux, macOS"
@@ -538,6 +540,7 @@ set_tool_paths() {
         bspatch="$(command -v bspatch)"
         cocoadialog="$(command -v cocoadialog)"
         gaster+="../bin/macos/gaster"
+        gaster4k+="../bin/macos/gaster4K"
         PlistBuddy="/usr/libexec/PlistBuddy"
         sha1sum="$(command -v shasum) -a 1"
         tsschecker="../bin/macos/tsschecker"
@@ -575,6 +578,7 @@ set_tool_paths() {
     aria2c+=" --no-conf --download-result=hide"
     curl="$(command -v curl)"
     futurerestore+="$dir/futurerestore"
+    futurerestore4k+="$dir/futurerestore_4k"
     ideviceactivation+="$dir/ideviceactivation"
     idevicediagnostics+="$dir/idevicediagnostics"
     ideviceinfo="$dir/ideviceinfo"
@@ -682,123 +686,10 @@ version_update_check() {
     if [[ $platform == "macos" && ! -e ../resources/firstrun ]]; then
         /usr/bin/xattr -cr ../bin/macos
     fi
-    log "Checking for updates..."
-    rm -f latest
-    $aria2c "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest"
-    [[ $? != 0 ]] && $curl -LO "https://api.github.com/repos/LukeZGD/Legacy-iOS-Kit/releases/latest"
-    github_api=$(cat latest 2>/dev/null)
-    version_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("complete")) | .name' | cut -c 25- | cut -c -9)
-    git_hash_latest=$(echo "$github_api" | $jq -r '.assets[] | select(.name|test("git-hash")) | .name' | cut -c 21- | cut -c -7)
-    popd >/dev/null
+    log "Not checking for updates."
 }
 
-version_update() {
-    select_yesno "Do you want to update now?" 1
-    if [[ $? != 1 ]]; then
-        log "User selected N, cannot continue. Exiting."
-        exit
-    fi
-    if [[ -d .git ]]; then
-        log "Running git reset..."
-        git reset --hard
-        log "Running git pull..."
-        git pull origin $(git rev-parse --abbrev-ref HEAD)
-        pushd "tmp$$" >/dev/null
-        log "Done! Please run the script again"
-        exit
-    fi
-    pushd "tmp$$" >/dev/null
-    log "Downloading..."
-    git clone --filter=blob:none "https://github.com/LukeZGD/Legacy-iOS-Kit"
-    if [[ $? != 0 ]]; then
-        git clone "https://github.com/LukeZGD/Legacy-iOS-Kit"
-        if [[ $? != 0 ]]; then
-            error "git clone failed. Please run the script again" \
-            "* If you have not installed/updated git, please install git from your package manager."
-        fi
-    fi
-    popd >/dev/null
-    log "Updating..."
-    cp resources/firstrun tmp$$ 2>/dev/null
-    rm -r bin/ LICENSE README.md restore.sh
-    if [[ $device_sudoloop == 1 ]]; then
-        sudo rm -rf resources/
-    fi
-    rm -r resources/ 2>/dev/null
-    mv tmp$$/Legacy-iOS-Kit/* tmp$$/Legacy-iOS-Kit/.git .
-    cp tmp$$/firstrun resources 2>/dev/null
-    pushd "tmp$$" >/dev/null
-    log "Done! Please run the script again"
-    exit
-}
 
-version_get() {
-    pushd .. >/dev/null
-    if [[ -d .git ]]; then
-        if [[ -e .git/shallow ]]; then
-            log "Shallow git repository detected. Unshallowing..."
-            git fetch --unshallow --filter=blob:none
-            if [[ $? != 0 ]]; then
-                git fetch --unshallow
-                if [[ $? != 0 ]]; then
-                    error "git fetch failed. Please run the script again" \
-                    "* If you have not installed/updated git, please install git from your package manager."
-                fi
-            fi
-        fi
-        git_hash=$(git rev-parse HEAD | cut -c -7)
-        local dm=$(git log -1 --format=%ci | cut -c 3- | cut -c -5)
-        version_current=v${dm//-/.}.
-        dm="20$dm"
-        if [[ $(uname) == "Darwin" ]]; then
-            dm="$(date -j -f "%Y-%m-%d %H:%M:%S" "${dm}-01 00:00:00" +%s)"
-        else
-            dm="$(date --date="${dm}-01" +%s)"
-        fi
-        dm=$((dm-1))
-        version_current+=$(git rev-list --count HEAD --since=$dm | xargs printf "%02d")
-    elif [[ -e ./resources/git_hash ]]; then
-        version_current="$(cat ./resources/version)"
-        git_hash="$(cat ./resources/git_hash)"
-    else
-        log ".git directory and git_hash file not found, cannot determine version."
-        if [[ $no_version_check != 1 ]]; then
-            warn "Your copy of Legacy iOS Kit is downloaded incorrectly. Do not use the \"Code\" button in GitHub."
-            print "* Please download Legacy iOS Kit using git clone or from GitHub releases: https://github.com/LukeZGD/Legacy-iOS-Kit/releases"
-        fi
-    fi
-    if [[ -n $version_current ]]; then
-        print "* Version: $version_current ($git_hash)"
-    fi
-    popd >/dev/null
-}
-
-version_check() {
-    if [[ $no_version_check == 1 ]]; then
-        warn "No version check flag detected, update check is disabled and no support will be provided."
-        return
-    fi
-    pushd .. >/dev/null
-    version_update_check
-    if [[ -z $version_latest ]]; then
-        warn "Failed to check for updates. GitHub may be down or blocked by your network."
-    elif [[ $git_hash_latest != "$git_hash" ]]; then
-        if [[ -z $version_current ]]; then
-            print "* Latest version:  $version_latest ($git_hash_latest)"
-            print "* Please download/pull the latest version before proceeding."
-            version_update
-        elif (( $(echo $version_current | cut -c 2- | sed -e 's/\.//g') >= $(echo $version_latest | cut -c 2- | sed -e 's/\.//g') )); then
-            warn "Current version is newer/different than remote: $version_latest ($git_hash_latest)"
-        else
-            print "* A newer version of Legacy iOS Kit is available."
-            print "* Current version: $version_current ($git_hash)"
-            print "* Latest version:  $version_latest ($git_hash_latest)"
-            print "* Please download/pull the latest version before proceeding."
-            version_update
-        fi
-    fi
-    popd >/dev/null
-}
 
 device_entry() {
     # enable manual entry
@@ -1146,7 +1037,6 @@ device_get_info() {
             error_msg+=$'\n* You may also try again in a live USB.'
         fi
         error_msg+=$'\n* Try restarting your PC/Mac as well as using different USB ports/cables.'
-        error_msg+=$'\n* For more details, read the "Troubleshooting" wiki page in GitHub.\n* Troubleshooting link: https://github.com/LukeZGD/Legacy-iOS-Kit/wiki/Troubleshooting'
         error "No device found! Please connect the iOS device to proceed." "$error_msg"
     fi
 
@@ -1839,6 +1729,23 @@ device_dfuhelper() {
     case $device_type in
         iPhone[79],* | iPhone8,[12] ) top="SIDE";;
     esac
+    if [[ $device_type == "AppleTV6,2" ]]; then
+
+        print "* Please connect the Apple TV 4K via DCSD connector with Goldeneye Dongle and reboot."
+        print "* If the Apple TV LED light DOES NOT flash rapidly, please check your connections and retry."
+
+        print "* If the Apple TV LED light IS flashing rapidly, then you may continue"
+        select_yesno "Select Y to continue, N to exit$rec" 1
+        if [[ $? != 1 ]]; then
+            if [[ -z $1 && $device_mode == "DFU" && $mode != "device_dfuhelper" ]]; then
+                log "Found device in DFU mode."
+                return
+            fi    
+            exit 
+        fi
+
+    fi
+        
     if [[ $device_type == "iPhone9,"* || $device_type == "iPod9,1" ]]; then
         home="VOL DOWN"
     fi
@@ -2122,7 +2029,13 @@ device_enter_mode() {
 
             device_enter_mode DFU
 
+            if [[ $device_type == "AppleTV6,2" ]]; then
+                tool="gaster4k"
+            else
+
             tool="gaster"
+
+                
             if [[ $device_type == "iPhone2,1" || $device_type == "iPod3,1" ]]; then
                 tool="ipwnder"
                 if [[ $platform == "macos" ]]; then
@@ -2145,8 +2058,16 @@ device_enter_mode() {
                     fi
                 fi
             fi
+        fi
 
-            if [[ $tool == "gaster" ]]; then
+            if [[ $tool == "gaster4k" ]]; then
+                log "Placing device to pwnDFU mode using gaster4k for Apple TV 4K"
+                print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
+                $gaster4k pwn
+                tool_pwned=$?
+                log "gaster reset"
+                $gaster4k reset
+            elif [[ $tool == "gaster" ]]; then
                 log "Placing device to pwnDFU mode using gaster"
                 print "* If pwning fails and gets stuck, you can press Ctrl+C to cancel, then re-enter DFU and retry."
                 $gaster pwn
@@ -2851,6 +2772,8 @@ ipsw_select() {
     read ipswselection
 
     print "*** $ipswselection has been selected! "
+
+    
 }
 
 ipsw_download() {
@@ -5231,6 +5154,8 @@ restore_futurerestore() {
     elif [[ $device_proc == 7 && $device_target_other != 1 &&
             $device_target_vers == "10.3.3" && $restore_usepwndfu64 != 1 ]]; then
         futurerestore2+="_new"
+    elif [[ $device_proc == 11 && $device_target_other != 1 && $device_type == "AppleTV6,2" ]]; then
+        futurerestore2+="_4k"
     else
         futurerestore2="../saved/futurerestore_$platform"
         if [[ $device_target_vers == "10"* ]]; then
@@ -7366,7 +7291,7 @@ menu_main() {
         menu_print_info
         print " > Main Menu"
         input "Select an option:"
-        if [[ $device_mode != "none" ]]; then
+            if [[ $device_mode != "none" ]]; then
             menu_items+=("Restore/Downgrade")
             if (( device_proc < 7 )); then
                 menu_items+=("Jailbreak Device")
@@ -8026,7 +7951,7 @@ menu_restore() {
         elif (( device_proc >= 7 )) && (( device_proc <= 10 )); then
             menu_items+=("Set Nonce Only")
         fi
-        menu_items+=("IPSW Downloader" "Go Back")
+        menu_items+=("IPSW Downloader" "Select IPSW" "Go Back")
         menu_print_info
         if [[ $1 == "ipsw" ]]; then
             print " > Main Menu > Misc Utilities > Create Custom IPSW"
@@ -8083,9 +8008,9 @@ menu_ipsw_downloader() {
 
     while [[ -z "$back" ]]; do
         menu_items=("Enter Build Version")
+        menu_items+=("(*) Select IPSW")
         if [[ -n $vers ]]; then
             menu_items+=("(*) Start Download")
-            menu_items+=("(*) Select IPSW")
         fi
         menu_items+=("Go Back")
         menu_print_info
@@ -8370,6 +8295,7 @@ menu_ipsw() {
         menu_items=("Select Target IPSW")
         menu_print_info
         print "* Only select unmodified IPSW for the selection. Do not select custom IPSWs"
+        print "*** Please use the built/custom IPSWs if this is an Apple TV 4K ***"
         echo
         if [[ $1 == *"powdersn0w"* ]]; then
             menu_items+=("Select Base IPSW")
@@ -10821,7 +10747,6 @@ main() {
     print " *** Legacy iOS Kit ***"
     print " - Script by LukeZGD -"
     echo
-    version_get
 
     if [[ $EUID == 0 && $run_as_root != 1 ]]; then
         error "Running the script as root is not allowed."
@@ -10850,7 +10775,6 @@ main() {
         fi
     fi
 
-    version_check
 
     local checks=(curl git patch xxd)
     local check_fail
