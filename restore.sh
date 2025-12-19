@@ -8655,8 +8655,6 @@ ipsw_version_set() {
         build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
 
      elif  [[ $device_type != "AppleTV6,2" ]]; then
-
-        log "Are we seeing Restore.plist?"
     file_extract_from_archive "$newpath.ipsw" Restore.plist
     fi
 
@@ -8670,8 +8668,6 @@ ipsw_version_set() {
         build=$(cat BuildVer | sed -ne '/<string>/,/<\/string>/p' | sed -e "s/<string>//" | sed "s/<\/string>//" | sed '2d')
     
     elif [[ $device_type != "AppleTV6,2" ]]; then
-
-        log "Are we STILL detecting restore.plist?"
 
         vers=$(cat Restore.plist | grep -i ProductVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
         build=$(cat Restore.plist | grep -i ProductBuildVersion -A 1 | grep -oPm1 "(?<=<string>)[^<]+")
@@ -8857,7 +8853,7 @@ menu_ipsw_browse() {
         pause
         return
     fi
-    if [[ $(cat Restore.plist | grep -c $device_type) == 0 ]]; then
+    if [[ $(cat BuildManifest.plist | grep -c $device_type) == 0 ]]; then
         log "Selected IPSW is not for your device $device_type."
         pause
         return
