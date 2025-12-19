@@ -1079,8 +1079,14 @@ device_get_info() {
             device_serial="$($irecovery -q | grep "SRNM" | cut -c 7- | cut -c 3- | cut -c -3)"
             device_get_name
             print "* Device: $device_name (${device_type} - ${device_model}) in $device_mode mode"
+            if [[ $device_type == "AppleTV6,2" ]]; then
+                print "* tvOS Version: $device_vers"
+                print "* ECID: $device_ecid"
+            else
+
             print "* iOS Version: $device_vers"
             print "* ECID: $device_ecid"
+            fi
             device_manufacturing
             if [[ $device_type == "iPod2,1" && $device_newbr != 2 ]]; then
                 device_newbr="$($irecovery -q | grep -c '240.5.1')"
@@ -1350,6 +1356,11 @@ device_get_info() {
         print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
         print "* iOS Version: $device_vers"
         print "* ECID: $device_ecid"
+    elif [[ $device_type == "AppleTV6,2" ]]; then
+                print "* Device: $device_name (${device_type} - ${device_model}ap) in $device_mode mode"
+                print "* tvOS Version: $device_vers"
+                print "* ECID: $device_ecid"
+            else
         echo
         warn "This device is mostly not supported by Legacy iOS Kit."
         print "* You may still continue but options will be limited to sideloading and other basic features."
@@ -7265,10 +7276,15 @@ menu_print_info() {
             warn "enable-ipx flag detected, 14.1 ramdisk will be used. Proceed with caution"
         fi
     fi
+    if [[ $device_type == "AppleTV6,2" ]]; then
+        print "* tvOS Version: $device_vers ($device_build)"
+    else
+        print "* tvOS Version: $device_vers"
     if [[ -n $device_build ]]; then
         print "* iOS Version: $device_vers ($device_build)"
     else
         print "* iOS Version: $device_vers"
+    fi
     fi
     if [[ $device_proc != 1 && $device_mode == "DFU" ]] && (( device_proc < 7 )); then
         print "* To get iOS version, go to: Misc Utilities -> Get iOS Version"
@@ -7951,8 +7967,13 @@ menu_restore() {
         elif (( device_proc >= 7 )) && (( device_proc <= 10 )); then
             menu_items+=("Set Nonce Only")
         fi
+        if [[ $device_type == "AppleTV6,2" ]]; then
+            menu_items+=("Select IPSW" "Go Back")
+        else
+
         menu_items+=("IPSW Downloader" "Select IPSW" "Go Back")
         menu_print_info
+        fi
         if [[ $1 == "ipsw" ]]; then
             print " > Main Menu > Misc Utilities > Create Custom IPSW"
         else
@@ -8373,10 +8394,13 @@ menu_ipsw() {
 
         elif [[ $2 == "fourthree" ]]; then
             menu_items+=("Download Target IPSW" "Select Base IPSW")
+        elif [[ $device_type == "AppleTV6,2" ]]; then
             if [[ -n $ipsw_path ]]; then
                 print "* Selected Target (iOS 6.1.3) IPSW: $ipsw_path.ipsw"
                 ipsw_print_warnings
-            else
+            elif [[ $device_type == "AppleTV6,2" ]]; then
+                    print "* Select target tvOS IPSW to continue"
+                    else
                 print "* Select Target (iOS 6.1.3) IPSW to continue"
             fi
             echo
@@ -8389,7 +8413,10 @@ menu_ipsw() {
                     warn "Selected Base IPSW failed validation, proceed with caution"
                 fi
                 echo
-            else
+                elif [[ $device_type == "AppleTV6,2" ]]; then
+                    print ""
+                else
+
                 print "* Select Base (iOS 4.3.x) IPSW to continue"
                 echo
             fi
